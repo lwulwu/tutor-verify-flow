@@ -29,8 +29,8 @@ const HardcopyRequestForm = ({ application }: HardcopyRequestFormProps) => {
     (req) => req.applicationId === application.id
   );
 
-  // Show only if application is approved upload and no existing hardcopy request
-  if (application.status !== ApplicationStatus.ApprovedUpload || existingRequest) {
+  // Don't show if there's already a hardcopy request
+  if (existingRequest) {
     return null;
   }
 
@@ -50,7 +50,10 @@ const HardcopyRequestForm = ({ application }: HardcopyRequestFormProps) => {
           </div>
           <div className="ml-3">
             <p className="text-sm text-blue-700">
-              Tài khoản của bạn đã được xác thực qua tải lên (Tích vàng). Để nâng cấp lên xác thực qua bản cứng (Tích xanh), hãy gửi bản cứng các giấy tờ đã công chứng đến văn phòng của chúng tôi.
+              {application.status === ApplicationStatus.ApprovedUpload 
+                ? "Tài khoản của bạn đã được xác thực qua tải lên (Tích vàng). Để nâng cấp lên xác thực qua bản cứng (Tích xanh), hãy gửi bản cứng các giấy tờ đã công chứng đến văn phòng của chúng tôi."
+                : "Bạn có thể gửi giấy tờ bản cứng đã công chứng song song với quá trình nộp hồ sơ trực tuyến để đẩy nhanh quá trình xác minh."
+              }
             </p>
           </div>
         </div>
@@ -62,7 +65,7 @@ const HardcopyRequestForm = ({ application }: HardcopyRequestFormProps) => {
           <li>In tất cả giấy tờ cần xác thực (bằng cấp, chứng chỉ)</li>
           <li>Mang đến cơ quan công chứng để công chứng</li>
           <li>Gửi bản công chứng đến địa chỉ văn phòng của chúng tôi</li>
-          <li>Điền thông tin yêu cầu dưới đây và nhấn "Yêu cầu xác nhận"</li>
+          <li>Điền thông tin yêu cầu dưới đây và nhấn "Đã gửi giấy tờ bản cứng"</li>
         </ol>
       </div>
       

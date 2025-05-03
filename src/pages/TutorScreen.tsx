@@ -45,7 +45,8 @@ const TutorScreen = () => {
           />
         )}
         
-        {application && application.status === "ApprovedUpload" && !hardcopyRequest && (
+        {/* Show hardcopy request form if there's no existing request, regardless of application status */}
+        {application && !hardcopyRequest && (
           <HardcopyRequestForm application={application} />
         )}
         
