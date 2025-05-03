@@ -45,7 +45,7 @@ const TutorScreen = () => {
           />
         )}
         
-        {application && application.status === "ApprovedUpload" && (
+        {application && application.status === "ApprovedUpload" && !hardcopyRequest && (
           <HardcopyRequestForm application={application} />
         )}
         

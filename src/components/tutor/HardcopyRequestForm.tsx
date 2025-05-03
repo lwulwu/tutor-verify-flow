@@ -76,7 +76,7 @@ const HardcopyRequestForm = ({ application }: HardcopyRequestFormProps) => {
         </address>
       </div>
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex justify-end">
           <button
             type="submit"
@@ -87,7 +87,7 @@ const HardcopyRequestForm = ({ application }: HardcopyRequestFormProps) => {
                 : "bg-primary-600 text-white hover:bg-primary-700"
             }`}
           >
-            {isRequesting ? "Đang gửi yêu cầu..." : "Gửi yêu cầu xác nhận"}
+            {isRequesting ? "Đang gửi yêu cầu..." : "Đã gửi giấy tờ bản cứng"}
           </button>
         </div>
       </form>
