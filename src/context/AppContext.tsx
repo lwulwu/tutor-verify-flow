@@ -1,4 +1,3 @@
-
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { DataFlow, Tutor, TutorApplication, Document, HardcopyRequest, VerificationStatus, ApplicationStatus, HardcopyRequestStatus } from "../types";
 import { generateMockData } from "../utils/mockData";
@@ -13,16 +12,44 @@ interface AppContextProps {
   addDocument: (document: Document) => void;
   createHardcopyRequest: (applicationId: string) => void;
   updateHardcopyRequest: (hardcopyRequest: HardcopyRequest) => void;
+  resetData: () => void;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
+const LOCAL_STORAGE_KEY = "tutorVerifyData";
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [dataFlow, setDataFlow] = useState<DataFlow>(() => generateMockData());
+  const [dataFlow, setDataFlow] = useState<DataFlow>(() => {
+    // Try to get data from localStorage first
+    const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (storedData) {
+      try {
+        return JSON.parse(storedData);
+      } catch (e) {
+        console.error("Error parsing stored data:", e);
+        return generateMockData();
+      }
+    }
+    return generateMockData();
+  });
+  
   const [showDataFlow, setShowDataFlow] = useState(false);
+
+  // Save to localStorage whenever dataFlow changes
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataFlow));
+  }, [dataFlow]);
 
   const toggleDataFlow = () => {
     setShowDataFlow(!showDataFlow);
+  };
+
+  const resetData = () => {
+    const newData = generateMockData();
+    setDataFlow(newData);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newData));
+    toast.success("Dữ liệu đã được đặt lại về mặc định");
   };
 
   const updateTutor = (updatedTutor: Tutor) => {
@@ -99,7 +126,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       documents: [...prevData.documents, newDocument],
     }));
     
-    toast.success("Tài liệu đã được tải lên thành công");
+    toast.success("Tài liệu đã đ��ợc tải lên thành công");
   };
 
   const createHardcopyRequest = (applicationId: string) => {
@@ -196,6 +223,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addDocument,
         createHardcopyRequest,
         updateHardcopyRequest,
+        resetData,
       }}
     >
       {children}
