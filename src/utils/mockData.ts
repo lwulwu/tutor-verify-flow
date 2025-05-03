@@ -1,5 +1,5 @@
 
-import { DataFlow, Tutor, TutorApplication, Document, HardcopyRequest, VerificationStatus, ApplicationStatus } from "../types";
+import { DataFlow, Tutor, TutorApplication, Document, HardcopyRequest, VerificationStatus, ApplicationStatus, HardcopyRequestStatus } from "../types";
 
 export const generateMockData = (): DataFlow => {
   const tutors: Tutor[] = [
@@ -132,7 +132,7 @@ export const generateMockData = (): DataFlow => {
       id: "hardcopy-1",
       applicationId: "app-2",
       requestedAt: new Date().toISOString(),
-      status: "Pending",
+      status: HardcopyRequestStatus.Pending,
       staffNotes: "",
     },
   ];
