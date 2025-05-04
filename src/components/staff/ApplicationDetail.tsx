@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { TutorApplication, Document, ApplicationStatus } from "../../types";
 import StatusBadge from "../StatusBadge";
 import { motion } from "framer-motion";
 import { ArrowLeft, Check, X, File, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ApplicationDetailProps {
   applicationId: string;
@@ -38,7 +38,7 @@ const ApplicationDetail = ({ applicationId, onBack }: ApplicationDetailProps) =>
     );
   }
 
-  // Initial states
+  // Initialize states with application data if available
   if (revisionNotes === "" && application.revisionNotes) {
     setRevisionNotes(application.revisionNotes);
   }
@@ -171,10 +171,11 @@ const ApplicationDetail = ({ applicationId, onBack }: ApplicationDetailProps) =>
             <div className="space-y-2">
               {application.status === ApplicationStatus.Pending && (
                 <>
-                  <button
+                  <Button
                     onClick={handleApproveUpload}
                     disabled={isProcessing}
-                    className={`w-full flex justify-center items-center px-4 py-2 rounded-md ${
+                    variant="default"
+                    className={`w-full ${
                       isProcessing
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-success-600 text-white hover:bg-success-700"
@@ -182,11 +183,12 @@ const ApplicationDetail = ({ applicationId, onBack }: ApplicationDetailProps) =>
                   >
                     <Check size={16} className="mr-1" />
                     Duyệt qua upload
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleRequestRevision}
                     disabled={isProcessing || !revisionNotes.trim()}
-                    className={`w-full flex justify-center items-center px-4 py-2 rounded-md ${
+                    variant="secondary"
+                    className={`w-full ${
                       isProcessing || !revisionNotes.trim()
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-warning-600 text-white hover:bg-warning-700"
@@ -194,14 +196,15 @@ const ApplicationDetail = ({ applicationId, onBack }: ApplicationDetailProps) =>
                   >
                     <X size={16} className="mr-1" />
                     Yêu cầu chỉnh sửa
-                  </button>
+                  </Button>
                 </>
               )}
               {application.status === ApplicationStatus.ApprovedUpload && (
-                <button
+                <Button
                   onClick={handleApproveHardcopy}
                   disabled={isProcessing}
-                  className={`w-full flex justify-center items-center px-4 py-2 rounded-md ${
+                  variant="default"
+                  className={`w-full ${
                     isProcessing
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-primary-600 text-white hover:bg-primary-700"
@@ -209,7 +212,7 @@ const ApplicationDetail = ({ applicationId, onBack }: ApplicationDetailProps) =>
                 >
                   <Check size={16} className="mr-1" />
                   Duyệt qua bản cứng
-                </button>
+                </Button>
               )}
             </div>
           </div>
