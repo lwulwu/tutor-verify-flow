@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { HardcopyRequest, HardcopyRequestStatus, Document } from "../../types";
@@ -105,13 +104,11 @@ const HardcopyRequestsList = () => {
       applicationId: selectedRequest.applicationId,
       staffId: "staff-1", // In a real app, this would be the actual staff ID
       description: uploadDescription,
-      uploadedAt: new Date().toISOString(),
       isVisibleToLearner: true,
       documentFileUploads: Array.from(selectedFiles).map((file, index) => ({
         id: `file-${Date.now()}-${index}`,
         fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
+        fileUrl: "/placeholder.svg", // Added the required fileUrl property
         uploadedAt: new Date().toISOString(),
       })),
     };
