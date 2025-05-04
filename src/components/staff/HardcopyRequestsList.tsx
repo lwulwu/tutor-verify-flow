@@ -1,16 +1,28 @@
 
 import { useState } from "react";
 import { useAppContext } from "../../context/AppContext";
-import { HardcopyRequest, HardcopyRequestStatus } from "../../types";
+import { HardcopyRequest, HardcopyRequestStatus, Document } from "../../types";
 import StatusBadge from "../StatusBadge";
 import { motion } from "framer-motion";
-import { Check, X, ClipboardCheck } from "lucide-react";
+import { Check, X, ClipboardCheck, Upload, File } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const HardcopyRequestsList = () => {
-  const { dataFlow, updateHardcopyRequest } = useAppContext();
+  const { dataFlow, updateHardcopyRequest, addDocument } = useAppContext();
   const [selectedRequest, setSelectedRequest] = useState<HardcopyRequest | null>(null);
   const [staffNotes, setStaffNotes] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [uploadDescription, setUploadDescription] = useState("");
   
   const hardcopyRequests = dataFlow.hardcopyRequests;
   
@@ -75,6 +87,41 @@ const HardcopyRequestsList = () => {
     }, 1000);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFiles(e.target.files);
+    }
+  };
+
+  const handleUploadSubmit = () => {
+    if (!selectedRequest || !selectedFiles || selectedFiles.length === 0 || !uploadDescription) {
+      alert("Vui lòng chọn file và nhập mô tả tài liệu");
+      return;
+    }
+
+    // Create a new document with the selected files
+    const newDocument: Document = {
+      id: `doc-${Date.now()}`,
+      applicationId: selectedRequest.applicationId,
+      staffId: "staff-1", // In a real app, this would be the actual staff ID
+      description: uploadDescription,
+      uploadedAt: new Date().toISOString(),
+      isVisibleToLearner: true,
+      documentFileUploads: Array.from(selectedFiles).map((file, index) => ({
+        id: `file-${Date.now()}-${index}`,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadedAt: new Date().toISOString(),
+      })),
+    };
+
+    addDocument(newDocument);
+    setUploadModalOpen(false);
+    setSelectedFiles(null);
+    setUploadDescription("");
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -132,17 +179,109 @@ const HardcopyRequestsList = () => {
                     <StatusBadge status={request.status} />
                   </td>
                   <td className="py-4 px-4 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => handleRequestSelect(request)}
-                      disabled={request.status !== HardcopyRequestStatus.Pending}
-                      className={`inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm ${
-                        request.status === HardcopyRequestStatus.Pending
-                          ? "text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      }`}
-                    >
-                      Xử lý
-                    </button>
+                    <div className="flex justify-center space-x-2">
+                      <button
+                        onClick={() => handleRequestSelect(request)}
+                        disabled={request.status !== HardcopyRequestStatus.Pending}
+                        className={`inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm ${
+                          request.status === HardcopyRequestStatus.Pending
+                            ? "text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                            : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        Xử lý
+                      </button>
+                      
+                      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+                        <DialogTrigger asChild>
+                          <button
+                            onClick={() => setSelectedRequest(request)}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-success-600 hover:bg-success-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success-500"
+                          >
+                            Upload
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Tải lên tài liệu bản cứng</DialogTitle>
+                            <DialogDescription>
+                              Tải lên hình ảnh hoặc bản scan của giấy tờ bản cứng đã nhận từ gia sư
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <label htmlFor="description" className="text-sm font-medium">
+                                Mô tả tài liệu
+                              </label>
+                              <input
+                                id="description"
+                                type="text"
+                                value={uploadDescription}
+                                onChange={(e) => setUploadDescription(e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                placeholder="Nhập mô tả tài liệu..."
+                              />
+                            </div>
+                            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                              <div className="space-y-1 text-center">
+                                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                                <div className="flex text-sm text-gray-600">
+                                  <label
+                                    htmlFor="file-upload"
+                                    className="relative cursor-pointer rounded-md bg-white font-medium text-primary-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 hover:text-primary-500"
+                                  >
+                                    <span>Tải lên file</span>
+                                    <input
+                                      id="file-upload"
+                                      name="file-upload"
+                                      type="file"
+                                      className="sr-only"
+                                      multiple
+                                      onChange={handleFileChange}
+                                    />
+                                  </label>
+                                  <p className="pl-1">hoặc kéo thả vào đây</p>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  PDF, PNG, JPG, GIF tối đa 10MB
+                                </p>
+                              </div>
+                            </div>
+                            {selectedFiles && selectedFiles.length > 0 && (
+                              <div className="mt-2">
+                                <p className="text-sm font-medium text-gray-700">Đã chọn ({selectedFiles.length} file):</p>
+                                <ul className="mt-1 text-sm text-gray-500 list-disc list-inside">
+                                  {Array.from(selectedFiles).map((file, index) => (
+                                    <li key={index} className="truncate">{file.name}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                          <DialogFooter className="sm:justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setUploadModalOpen(false)}
+                              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                            >
+                              Hủy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleUploadSubmit}
+                              disabled={!selectedFiles || selectedFiles.length === 0 || !uploadDescription}
+                              className={`ml-2 px-4 py-2 rounded-md ${
+                                !selectedFiles || selectedFiles.length === 0 || !uploadDescription
+                                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  : "bg-primary-600 text-white hover:bg-primary-700"
+                              }`}
+                            >
+                              Lưu
+                            </button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </td>
                 </tr>
               ))
