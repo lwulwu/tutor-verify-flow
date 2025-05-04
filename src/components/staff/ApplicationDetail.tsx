@@ -131,7 +131,7 @@ const ApplicationDetail = ({ applicationId, onBack }: ApplicationDetailProps) =>
           />
 
           <div className="pt-4 border-t border-gray-200">
-            <DocumentUpload />
+            <DocumentUpload applicationId={applicationId} />
           </div>
         </div>
       </div>

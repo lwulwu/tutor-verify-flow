@@ -3,7 +3,7 @@ import { useAppContext } from "../../context/AppContext";
 import { HardcopyRequest, HardcopyRequestStatus, Document } from "../../types";
 import StatusBadge from "../StatusBadge";
 import { motion } from "framer-motion";
-import { Check, X, ClipboardCheck, Upload, File } from "lucide-react";
+import { Check, X, ClipboardCheck, Upload, AlertTriangle, File } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,9 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 const HardcopyRequestsList = () => {
   const { dataFlow, updateHardcopyRequest, addDocument } = useAppContext();
@@ -22,6 +25,10 @@ const HardcopyRequestsList = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploadDescription, setUploadDescription] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const hardcopyRequests = dataFlow.hardcopyRequests;
   
@@ -69,7 +76,11 @@ const HardcopyRequestsList = () => {
 
   const handleReject = () => {
     if (!selectedRequest || !staffNotes.trim()) {
-      alert("Vui lòng nhập ghi chú trước khi từ chối.");
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập ghi chú trước khi từ chối.",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -88,35 +99,95 @@ const HardcopyRequestsList = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFiles(e.target.files);
+      // Validate file size
+      const invalidFiles = Array.from(e.target.files).filter(
+        file => file.size > 10 * 1024 * 1024 // 10MB limit
+      );
+      
+      if (invalidFiles.length > 0) {
+        setUploadError(`Các file sau vượt quá giới hạn 10MB: ${invalidFiles.map(f => f.name).join(', ')}`);
+        setSelectedFiles(null);
+      } else {
+        setUploadError(null);
+        setSelectedFiles(e.target.files);
+      }
     }
   };
 
-  const handleUploadSubmit = () => {
-    if (!selectedRequest || !selectedFiles || selectedFiles.length === 0 || !uploadDescription) {
-      alert("Vui lòng chọn file và nhập mô tả tài liệu");
+  const validateUploadForm = (): boolean => {
+    if (!selectedRequest) {
+      setUploadError("Không tìm thấy yêu cầu đã chọn");
+      return false;
+    }
+    
+    if (!selectedFiles || selectedFiles.length === 0) {
+      setUploadError("Vui lòng chọn ít nhất một file để tải lên");
+      return false;
+    }
+    
+    if (!uploadDescription.trim()) {
+      setUploadError("Vui lòng nhập mô tả tài liệu");
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!validateUploadForm()) {
       return;
     }
 
-    // Create a new document with the selected files
-    const newDocument: Document = {
-      id: `doc-${Date.now()}`,
-      applicationId: selectedRequest.applicationId,
-      staffId: "staff-1", // In a real app, this would be the actual staff ID
-      description: uploadDescription,
-      isVisibleToLearner: true,
-      documentFileUploads: Array.from(selectedFiles).map((file, index) => ({
-        id: `file-${Date.now()}-${index}`,
-        fileName: file.name,
-        fileUrl: "/placeholder.svg", // Added the required fileUrl property
-        uploadedAt: new Date().toISOString(),
-      })),
-    };
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      // Simulate file upload with progress
+      const totalSteps = 10;
+      for (let step = 1; step <= totalSteps; step++) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setUploadProgress(Math.floor((step / totalSteps) * 100));
+      }
 
-    addDocument(newDocument);
-    setUploadModalOpen(false);
-    setSelectedFiles(null);
-    setUploadDescription("");
+      // Create a new document with the selected files
+      const newDocument: Document = {
+        id: `doc-${Date.now()}`,
+        applicationId: selectedRequest!.applicationId,
+        staffId: "staff-1", // In a real app, this would be the actual staff ID
+        description: uploadDescription,
+        isVisibleToLearner: true,
+        documentFileUploads: Array.from(selectedFiles!).map((file, index) => ({
+          id: `file-${Date.now()}-${index}`,
+          fileName: file.name,
+          fileUrl: "/placeholder.svg", // In a real app, this would be the actual URL
+          uploadedAt: new Date().toISOString(),
+        })),
+      };
+
+      addDocument(newDocument);
+      
+      toast({
+        title: "Thành công",
+        description: "Tài liệu đã được tải lên thành công",
+        variant: "default",
+      });
+      
+      // Reset form
+      setUploadModalOpen(false);
+      setSelectedFiles(null);
+      setUploadDescription("");
+      setUploadError(null);
+    } catch (error) {
+      console.error("Upload error:", error);
+      setUploadError("Đã xảy ra lỗi khi tải lên tài liệu. Vui lòng thử lại.");
+      toast({
+        title: "Lỗi tải lên",
+        description: "Không thể tải lên tài liệu. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -189,7 +260,15 @@ const HardcopyRequestsList = () => {
                         Xử lý
                       </button>
                       
-                      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+                      <Dialog open={uploadModalOpen && selectedRequest?.id === request.id} onOpenChange={(open) => {
+                        if (!open) {
+                          setUploadError(null);
+                          setUploadProgress(0);
+                          setUploadDescription("");
+                          setSelectedFiles(null);
+                        }
+                        setUploadModalOpen(open);
+                      }}>
                         <DialogTrigger asChild>
                           <button
                             onClick={() => setSelectedRequest(request)}
@@ -205,6 +284,14 @@ const HardcopyRequestsList = () => {
                               Tải lên hình ảnh hoặc bản scan của giấy tờ bản cứng đã nhận từ gia sư
                             </DialogDescription>
                           </DialogHeader>
+                          
+                          {uploadError && (
+                            <Alert variant="destructive" className="mt-2">
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>{uploadError}</AlertDescription>
+                            </Alert>
+                          )}
+                          
                           <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
                               <label htmlFor="description" className="text-sm font-medium">
@@ -217,6 +304,7 @@ const HardcopyRequestsList = () => {
                                 onChange={(e) => setUploadDescription(e.target.value)}
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 placeholder="Nhập mô tả tài liệu..."
+                                disabled={isUploading}
                               />
                             </div>
                             <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
@@ -225,7 +313,7 @@ const HardcopyRequestsList = () => {
                                 <div className="flex text-sm text-gray-600">
                                   <label
                                     htmlFor="file-upload"
-                                    className="relative cursor-pointer rounded-md bg-white font-medium text-primary-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 hover:text-primary-500"
+                                    className={`relative cursor-pointer rounded-md bg-white font-medium text-primary-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 hover:text-primary-500 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                   >
                                     <span>Tải lên file</span>
                                     <input
@@ -235,6 +323,8 @@ const HardcopyRequestsList = () => {
                                       className="sr-only"
                                       multiple
                                       onChange={handleFileChange}
+                                      accept=".pdf,.png,.jpg,.jpeg,.gif"
+                                      disabled={isUploading}
                                     />
                                   </label>
                                   <p className="pl-1">hoặc kéo thả vào đây</p>
@@ -247,18 +337,33 @@ const HardcopyRequestsList = () => {
                             {selectedFiles && selectedFiles.length > 0 && (
                               <div className="mt-2">
                                 <p className="text-sm font-medium text-gray-700">Đã chọn ({selectedFiles.length} file):</p>
-                                <ul className="mt-1 text-sm text-gray-500 list-disc list-inside">
+                                <ul className="mt-1 text-sm text-gray-500 space-y-1">
                                   {Array.from(selectedFiles).map((file, index) => (
-                                    <li key={index} className="truncate">{file.name}</li>
+                                    <li key={index} className="flex items-center">
+                                      <File className="h-4 w-4 mr-2" />
+                                      <span className="truncate">{file.name}</span>
+                                    </li>
                                   ))}
                                 </ul>
                               </div>
                             )}
+                            
+                            {isUploading && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-700">Đang tải lên...</span>
+                                  <span className="text-sm text-gray-500">{uploadProgress}%</span>
+                                </div>
+                                <Progress value={uploadProgress} />
+                              </div>
+                            )}
                           </div>
+                          
                           <DialogFooter className="sm:justify-end">
                             <button
                               type="button"
                               onClick={() => setUploadModalOpen(false)}
+                              disabled={isUploading}
                               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                             >
                               Hủy
@@ -266,14 +371,14 @@ const HardcopyRequestsList = () => {
                             <button
                               type="button"
                               onClick={handleUploadSubmit}
-                              disabled={!selectedFiles || selectedFiles.length === 0 || !uploadDescription}
+                              disabled={isUploading || !selectedFiles || selectedFiles.length === 0 || !uploadDescription.trim()}
                               className={`ml-2 px-4 py-2 rounded-md ${
-                                !selectedFiles || selectedFiles.length === 0 || !uploadDescription
+                                isUploading || !selectedFiles || selectedFiles.length === 0 || !uploadDescription.trim()
                                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                                   : "bg-primary-600 text-white hover:bg-primary-700"
                               }`}
                             >
-                              Lưu
+                              {isUploading ? "Đang tải lên..." : "Lưu"}
                             </button>
                           </DialogFooter>
                         </DialogContent>
